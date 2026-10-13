@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Калькулятор"><meta name="theme-color" content="#111114">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png"><title>Калькулятор</title>
+<style>
+:root{--bg:#111114;--card:#1c1c20;--line:#2c2c31;--tx:#f2f2f5;--mu:#8e8e96;--ac:#ff9f0a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 24px)}
+.w{max-width:480px;margin:0 auto}
+.tabs{display:flex;background:var(--card);border-radius:999px;padding:4px;margin:16px 0;box-shadow:0 6px 20px #0008}
+.tabs button{flex:1;border:0;background:none;color:var(--mu);font-family:inherit;font-weight:600;font-size:15px;padding:12px;border-radius:999px}
+.tabs button.on{background:var(--ac);color:#111}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 6px 20px #0006;margin-bottom:14px}
+label{display:block;color:var(--mu);font-size:13px;margin:12px 0 6px}label:first-child{margin-top:0}
+input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--tx);border-radius:14px;padding:14px;font-family:inherit;font-weight:600;font-size:18px;outline:none}
+input:focus{border-color:var(--ac)}
+.r{display:flex;gap:10px}.r>div{flex:1}
+.u{display:flex;gap:8px;margin-bottom:4px}.u button{flex:1;border:1px solid var(--line);background:none;color:var(--mu);border-radius:12px;padding:10px;font-family:inherit;font-weight:600;font-size:14px}
+.u button.on{border-color:var(--ac);color:var(--ac)}
+.res{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.res:last-child{border:0}.res span{color:var(--mu)}.res b{font-size:22px}.res.big b{font-size:34px;color:var(--ac)}
+.err{color:#ff453a;font-size:14px}
+</style></head><body><div class="w">
+<div class="tabs"><button id="t1" class="on">Плитка</button><button id="t2">Ламинат</button></div>
+<div class="card" id="in"></div><div class="card" id="out"></div></div>
+<script>
+let mode=1,unit='mm',lam='plank';
+const $=s=>document.querySelector(s),B=BigInt;
+const V={n:'',w:'',h:'',pa:'',a:''};
+function sc(s,d){s=String(s).trim().replace(',','.');if(!/^\d*\.?\d*$/.test(s)||s===''||s==='.')return null;let[i,f='']=s.split('.');f=(f+'0'.repeat(d)).slice(0,d);return B(i||'0')*B(10)**B(d)+B(f||'0')}
+const cd=(a,b)=>(a+b-1n)/b;
+function fmt(v,sh,d){const p=B(10)**B(sh-d);v=(v+p/2n)/p;const q=B(10)**B(d);let i=v/q,f=String(v%q).padStart(d,'0').replace(/0+$/,'');return i+(f?','+f:'')}
+function inp(id,l,ph,m){return`<label>${l}</label><input id="${id}" inputmode="${m||'decimal'}" placeholder="${ph||''}" value="${V[id]}">`}
+function draw(){
+ const tile=mode==1,byA=!tile&&lam=='area';
+ let h='';
+ if(!tile)h+=`<div class="u"><button data-l="plank" class="${lam=='plank'?'on':''}">По доскам</button><button data-l="area" class="${lam=='area'?'on':''}">По м² упаковки</button></div>`;
+ if(!byA){h+=`<div class="u"><button data-u="mm" class="${unit=='mm'?'on':''}">мм</button><button data-u="cm" class="${unit=='cm'?'on':''}">см</button></div>`;
+  h+=inp('n',tile?'Штук в упаковке':'Досок в упаковке','','numeric')+`<div class="r"><div>${inp('w',tile?'Ширина':'Длина доски')}</div><div>${inp('h',tile?'Высота':'Ширина доски')}</div></div>`}
+ else h+=inp('pa','Площадь упаковки, м²');
+ h+=inp('a','Нужно клиенту, м²');
+ $('#in').innerHTML=h;
+ document.querySelectorAll('#in input').forEach(e=>e.oninput=()=>{V[e.id]=e.value;calc()});
+ document.querySelectorAll('[data-u]').forEach(e=>e.onclick=()=>{unit=e.dataset.u;draw()});
+ document.querySelectorAll('[data-l]').forEach(e=>e.onclick=()=>{lam=e.dataset.l;draw()});
+ calc()}
+function calc(){
+ const o=$('#out'),tile=mode==1,byA=!tile&&lam=='area',k=unit=='cm'?10n:1n;
+ const A=sc(V.a,4),em='<span style="color:var(--mu)">Введите данные</span>';
+ if(!A||A===0n){o.innerHTML=em;return}
+ if(byA){const P=sc(V.pa,4);if(!P||P===0n){o.innerHTML=em;return}
+  const f=A/P,r=A-f*P;
+  o.innerHTML=`<div class="res big"><span>Целых упаковок</span><b>${f}</b></div><div class="res"><span>Остаток, м²</span><b>${fmt(r,4,4)}</b></div>`;return}
+ const n=sc(V.n,0),w=sc(V.w,4),h=sc(V.h,4);
+ if(!n||!w||!h||n===0n||w===0n||h===0n){o.innerHTML=em;return}
+ const E=10n**10n,t=w*k*h*k,np=cd(A*E,t),f=np/n,r=np%n,s=cd(np*t,E);
+ o.innerHTML=`<div class="res big"><span>Целых упаковок</span><b>${f}</b></div><div class="res big"><span>Отдельных штук</span><b>${r}</b></div><div class="res"><span>Всего штук</span><b>${np}</b></div><div class="res"><span>Площадь, м²</span><b>${fmt(s,4,4)}</b></div>`}
+$('#t1').onclick=()=>{mode=1;$('#t1').className='on';$('#t2').className='';draw()};
+$('#t2').onclick=()=>{mode=2;$('#t2').className='on';$('#t1').className='';draw()};
+draw();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+</script></body></html>
